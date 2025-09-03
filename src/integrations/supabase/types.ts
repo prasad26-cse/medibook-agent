@@ -14,7 +14,234 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          duration_minutes: number
+          end_time: string
+          id: string
+          is_new_patient: boolean | null
+          notes: string | null
+          patient_id: string
+          start_time: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          duration_minutes?: number
+          end_time: string
+          id?: string
+          is_new_patient?: boolean | null
+          notes?: string | null
+          patient_id: string
+          start_time: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          duration_minutes?: number
+          end_time?: string
+          id?: string
+          is_new_patient?: boolean | null
+          notes?: string | null
+          patient_id?: string
+          start_time?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors: {
+        Row: {
+          calendar_reference: string | null
+          created_at: string
+          id: string
+          location: string | null
+          name: string
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          calendar_reference?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name: string
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          calendar_reference?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forms: {
+        Row: {
+          appointment_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          responses: Json | null
+          sent_at: string | null
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          responses?: Json | null
+          sent_at?: string | null
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          responses?: Json | null
+          sent_at?: string | null
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          address: string | null
+          created_at: string
+          dob: string
+          email: string
+          first_name: string
+          group_id: string | null
+          id: string
+          insurance_carrier: string | null
+          last_name: string
+          member_id: string | null
+          patient_type: string | null
+          phone: string
+          primary_doctor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          dob: string
+          email: string
+          first_name: string
+          group_id?: string | null
+          id?: string
+          insurance_carrier?: string | null
+          last_name: string
+          member_id?: string | null
+          patient_type?: string | null
+          phone: string
+          primary_doctor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          dob?: string
+          email?: string
+          first_name?: string
+          group_id?: string | null
+          id?: string
+          insurance_carrier?: string | null
+          last_name?: string
+          member_id?: string | null
+          patient_type?: string | null
+          phone?: string
+          primary_doctor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_patients_doctor"
+            columns: ["primary_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          appointment_id: string
+          channel: string
+          created_at: string
+          id: string
+          reminder_no: number
+          response: Json | null
+          sent_at: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          channel: string
+          created_at?: string
+          id?: string
+          reminder_no: number
+          response?: Json | null
+          sent_at?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          reminder_no?: number
+          response?: Json | null
+          sent_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
