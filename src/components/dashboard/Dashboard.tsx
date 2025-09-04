@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Heart, User as UserIcon, FileText, Bell, LogOut } from "lucide-react";
+import { Calendar, Heart, User as UserIcon, FileText, Bell, LogOut, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardProps {
   user: User;
@@ -14,6 +15,7 @@ interface DashboardProps {
 const Dashboard = ({ user, session }: DashboardProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -28,34 +30,63 @@ const Dashboard = ({ user, session }: DashboardProps) => {
     setLoading(false);
   };
 
+  const handleCardClick = (component: string) => {
+    switch (component) {
+      case 'booking':
+        navigate('/booking');
+        break;
+      case 'chat':
+        navigate('/booking?tab=chat');
+        break;
+      case 'profile':
+        toast({
+          title: "Profile Management",
+          description: "Profile editing coming soon! (Free tier feature)",
+        });
+        break;
+      case 'forms':
+        toast({
+          title: "Medical Forms",
+          description: "Form management coming soon! (Free tier feature)",
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
   const dashboardCards = [
     {
       title: "Book Appointment",
-      description: "Schedule your next medical appointment",
+      description: "Schedule your next medical appointment (Free Tier)",
       icon: Calendar,
       color: "from-primary to-primary-glow",
-      action: "Book Now"
+      action: "Book Now",
+      component: "booking"
     },
     {
-      title: "My Profile",
-      description: "Update your personal and insurance information",  
+      title: "My Profile", 
+      description: "Update your personal and insurance information",
       icon: UserIcon,
       color: "from-medical-coral to-accent",
-      action: "View Profile"
+      action: "View Profile",
+      component: "profile"
     },
     {
       title: "Medical Forms",
       description: "Complete intake forms and view your documents",
       icon: FileText,
       color: "from-purple-500 to-purple-600",
-      action: "View Forms"
+      action: "View Forms",
+      component: "forms"
     },
     {
-      title: "Appointment History",
-      description: "View your past and upcoming appointments",
-      icon: Heart,
+      title: "Health Assistant",
+      description: "Chat with our AI health assistant (Free Tier)",
+      icon: MessageCircle,
       color: "from-green-500 to-emerald-600",
-      action: "View History"
+      action: "Start Chat",
+      component: "chat"
     }
   ];
 
@@ -124,6 +155,7 @@ const Dashboard = ({ user, session }: DashboardProps) => {
                 <Button 
                   className="w-full group-hover:scale-105 transition-transform duration-200"
                   variant="outline"
+                  onClick={() => handleCardClick(card.component)}
                 >
                   {card.action}
                 </Button>

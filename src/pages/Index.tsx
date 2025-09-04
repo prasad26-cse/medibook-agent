@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import AuthPage from "@/components/auth/AuthPage";
 import Dashboard from "@/components/dashboard/Dashboard";
+import BookingPage from "./Booking";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     // Set up auth state listener
@@ -44,6 +47,11 @@ const Index = () => {
 
   if (!user || !session) {
     return <AuthPage />;
+  }
+
+  // Route to different components based on path
+  if (location.pathname === '/booking') {
+    return <BookingPage user={user} session={session} />;
   }
 
   return <Dashboard user={user} session={session} />;
