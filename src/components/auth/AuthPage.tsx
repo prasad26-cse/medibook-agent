@@ -59,6 +59,37 @@ const AuthPage = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
+    // Check for admin credentials first
+    if (email === "admin@clinic.com" && password === "Admin@1234") {
+      try {
+        const response = await fetch("http://localhost:8000/api/admin/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          localStorage.setItem("admin_token", data.access_token);
+          window.location.href = "/admin-dashboard";
+          return;
+        } else {
+          throw new Error("Admin authentication failed");
+        }
+      } catch (error) {
+        toast({
+          title: "Admin login failed",
+          description: "Unable to connect to admin backend",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Regular user authentication
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -116,7 +147,7 @@ const AuthPage = () => {
                     id="signin-email"
                     name="email"
                     type="email"
-                    placeholder="your.email@example.com"
+                    placeholder="your.email@example.com (admin@clinic.com for admin)"
                     required
                   />
                 </div>
@@ -129,6 +160,9 @@ const AuthPage = () => {
                     placeholder="••••••••"
                     required
                   />
+                </div>
+                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+                  <strong>Admin Login:</strong> admin@clinic.com / Admin@1234
                 </div>
                 <Button 
                   type="submit" 
