@@ -61,32 +61,11 @@ const AuthPage = () => {
 
     // Check for admin credentials first
     if (email === "admin@clinic.com" && password === "Admin@1234") {
-      try {
-        const response = await fetch("http://localhost:8000/api/admin/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          localStorage.setItem("admin_token", data.access_token);
-          window.location.href = "/admin-dashboard";
-          return;
-        } else {
-          throw new Error("Admin authentication failed");
-        }
-      } catch (error) {
-        toast({
-          title: "Admin login failed",
-          description: "Unable to connect to admin backend",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
+      localStorage.setItem("admin_session", "true");
+      localStorage.setItem("admin_email", email);
+      window.location.href = "/admin-dashboard";
+      setLoading(false);
+      return;
     }
 
     // Regular user authentication
@@ -124,10 +103,14 @@ const AuthPage = () => {
         
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="signin" className="flex items-center gap-2">
                 <LogIn className="w-4 h-4" />
                 Sign In
+              </TabsTrigger>
+              <TabsTrigger value="admin" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Admin
               </TabsTrigger>
               <TabsTrigger value="signup" className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
@@ -167,6 +150,45 @@ const AuthPage = () => {
                   disabled={loading}
                 >
                   {loading ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="admin">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleSignIn(formData);
+              }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-email">Admin Email</Label>
+                  <Input
+                    id="admin-email"
+                    name="email"
+                    type="email"
+                    placeholder="admin@clinic.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-password">Admin Password</Label>
+                  <Input
+                    id="admin-password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+                  <strong>Admin Access:</strong> Use admin@clinic.com with password Admin@1234
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all duration-300"
+                  disabled={loading}
+                >
+                  {loading ? "Signing in..." : "Admin Sign In"}
                 </Button>
               </form>
             </TabsContent>

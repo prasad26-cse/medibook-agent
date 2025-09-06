@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserCheck, Clock, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi } from "@/services/adminApi";
+import { adminService } from "@/services/adminService";
 
 interface Doctor {
   id: string;
@@ -23,17 +23,18 @@ const DoctorsSchedule = () => {
 
   const loadDoctors = async () => {
     setLoading(true);
-    const result = await adminApi.getDoctors();
-    if (result.data) {
-      setDoctors(result.data);
-    } else {
+    try {
+      const data = await adminService.getDoctors();
+      setDoctors(data);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load doctors",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const getSpecialtyColor = (specialty: string) => {

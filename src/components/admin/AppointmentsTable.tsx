@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar, Clock, User, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi } from "@/services/adminApi";
+import { adminService } from "@/services/adminService";
 
 interface Appointment {
   id: string;
@@ -30,28 +30,29 @@ const AppointmentsTable = () => {
 
   const loadAppointments = async () => {
     setLoading(true);
-    const result = await adminApi.getAppointments();
-    if (result.data) {
-      setAppointments(result.data);
-    } else {
+    try {
+      const data = await adminService.getAppointments();
+      setAppointments(data);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load appointments",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
-    const result = await adminApi.updateAppointmentStatus(id, newStatus);
-    if (result.data) {
+    try {
+      await adminService.updateAppointmentStatus(id, newStatus);
       toast({
         title: "Success",
         description: "Appointment status updated"
       });
       loadAppointments();
-    } else {
+    } catch (error) {
       toast({
         title: "Error", 
         description: "Failed to update appointment",

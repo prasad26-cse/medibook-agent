@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, UserCheck, Activity, LogOut, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi } from "@/services/adminApi";
+import { adminService } from "@/services/adminService";
 import AppointmentsTable from "./AppointmentsTable";
 import PatientsTable from "./PatientsTable";
 import DoctorsSchedule from "./DoctorsSchedule";
@@ -25,47 +25,34 @@ const AdminDashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    verifyAdminAndLoadData();
+    const checkAuth = () => {
+      if (!adminService.isAuthenticated()) {
+        window.location.href = "/";
+        return;
+      }
+      fetchData();
+    };
+    checkAuth();
   }, []);
 
-  const verifyAdminAndLoadData = async () => {
-    const verifyResult = await adminApi.verifyAdmin();
-    if (verifyResult.error) {
-      toast({
-        title: "Authentication Error",
-        description: "Please log in as admin",
-        variant: "destructive"
-      });
-      localStorage.removeItem("admin_token");
-      window.location.href = "/";
-      return;
-    }
-
-    await loadDashboardData();
-  };
-
-  const loadDashboardData = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const result = await adminApi.getDashboardStats();
-    if (result.data) {
-      setStats(result.data);
-    } else {
+    try {
+      const statsData = await adminService.getDashboardStats();
+      setStats(statsData);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("admin_token");
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully"
-    });
-    window.location.href = "/";
+    adminService.logout();
   };
 
   if (loading) {
@@ -99,7 +86,7 @@ const AdminDashboard = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={loadDashboardData}
+                onClick={fetchData}
                 disabled={loading}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, Search, User, Phone, Mail, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi } from "@/services/adminApi";
+import { adminService } from "@/services/adminService";
 
 interface Patient {
   id: string;
@@ -41,18 +41,19 @@ const PatientsTable = () => {
 
   const loadPatients = async () => {
     setLoading(true);
-    const result = await adminApi.getPatients();
-    if (result.data) {
-      setPatients(result.data);
-      setFilteredPatients(result.data);
-    } else {
+    try {
+      const data = await adminService.getPatients();
+      setPatients(data);
+      setFilteredPatients(data);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load patients",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const getPatientTypeColor = (type: string) => {
