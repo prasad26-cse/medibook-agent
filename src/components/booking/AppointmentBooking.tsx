@@ -95,7 +95,37 @@ const AppointmentBooking = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create appointment with free tier limitations
+      // Ensure user has a patient record first
+      const { data: existingPatient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!existingPatient) {
+        // Create patient record if it doesn't exist
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from('patients')
+            .insert({
+              id: user.id,
+              first_name: profile.first_name || '',
+              last_name: profile.last_name || '',
+              email: user.email || '',
+              phone: profile.phone || '',
+              dob: profile.dob || new Date().toISOString().split('T')[0],
+              patient_type: profile.patient_type || 'new'
+            });
+        }
+      }
+
+      // Create appointment
       const appointmentData = {
         patient_id: user.id,
         doctor_id: selectedDoctor,
