@@ -147,7 +147,7 @@ const AuthPage = () => {
                     id="signin-email"
                     name="email"
                     type="email"
-                    placeholder="your.email@example.com (admin@clinic.com for admin)"
+                    placeholder="your.email@example.com"
                     required
                   />
                 </div>
@@ -160,9 +160,6 @@ const AuthPage = () => {
                     placeholder="••••••••"
                     required
                   />
-                </div>
-                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-                  <strong>Admin Login:</strong> admin@clinic.com / Admin@1234
                 </div>
                 <Button 
                   type="submit" 
