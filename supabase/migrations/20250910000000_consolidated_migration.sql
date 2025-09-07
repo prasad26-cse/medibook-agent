@@ -1,8 +1,17 @@
+
 -- Create medical appointment scheduling database schema
+
+-- Drop existing tables to ensure a clean slate
+DROP TABLE IF EXISTS public.reminders;
+DROP TABLE IF EXISTS public.forms;
+DROP TABLE IF EXISTS public.appointments;
+DROP TABLE IF EXISTS public.doctors;
+DROP TABLE IF EXISTS public.patients;
+DROP TABLE IF EXISTS public.profiles;
 
 -- Create patients table
 CREATE TABLE public.patients (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID NOT NULL PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   dob DATE NOT NULL,
@@ -80,6 +89,9 @@ CREATE INDEX idx_reminders_appointment_id ON public.reminders(appointment_id);
 -- Add foreign key constraint for doctor reference in patients
 ALTER TABLE public.patients ADD CONSTRAINT fk_patients_doctor FOREIGN KEY (primary_doctor_id) REFERENCES public.doctors(id);
 
+-- Add unique constraint to prevent double booking
+ALTER TABLE public.appointments ADD CONSTRAINT unique_doctor_start_time UNIQUE (doctor_id, start_time);
+
 -- Enable Row Level Security on all tables
 ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
@@ -88,71 +100,95 @@ ALTER TABLE public.forms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for patients (users can only see their own data)
-CREATE POLICY "Users can view their own patient record" 
-ON public.patients 
-FOR SELECT 
-USING (auth.uid()::text = id::text);
+CREATE POLICY "Users can view their own patient record"
+ON public.patients
+FOR SELECT
+USING (auth.uid() = id);
 
-CREATE POLICY "Users can update their own patient record" 
-ON public.patients 
-FOR UPDATE 
-USING (auth.uid()::text = id::text);
+CREATE POLICY "Users can update their own patient record"
+ON public.patients
+FOR UPDATE
+USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert their own patient record" 
-ON public.patients 
-FOR INSERT 
-WITH CHECK (auth.uid()::text = id::text);
+CREATE POLICY "Users can insert their own patient record"
+ON public.patients
+FOR INSERT
+WITH CHECK (auth.uid() = id);
 
 -- Create RLS policies for doctors (readable by all authenticated users)
-CREATE POLICY "Doctors are viewable by authenticated users" 
-ON public.doctors 
-FOR SELECT 
+CREATE POLICY "Doctors are viewable by authenticated users"
+ON public.doctors
+FOR SELECT
 TO authenticated
 USING (true);
 
 -- Create RLS policies for appointments (users can only see their own appointments)
-CREATE POLICY "Users can view their own appointments" 
-ON public.appointments 
-FOR SELECT 
-USING (auth.uid()::text = patient_id::text);
-
-CREATE POLICY "Users can create their own appointments" 
-ON public.appointments 
-FOR INSERT 
-WITH CHECK (auth.uid()::text = patient_id::text);
-
-CREATE POLICY "Users can update their own appointments" 
-ON public.appointments 
-FOR UPDATE 
-USING (auth.uid()::text = patient_id::text);
-
--- Create RLS policies for forms (users can only see forms for their appointments)
-CREATE POLICY "Users can view forms for their appointments" 
-ON public.forms 
-FOR SELECT 
+CREATE POLICY "Users can view their own appointments"
+ON public.appointments
+FOR SELECT
 USING (EXISTS (
-  SELECT 1 FROM public.appointments 
-  WHERE appointments.id = forms.appointment_id 
-  AND appointments.patient_id::text = auth.uid()::text
+  SELECT 1 FROM public.patients
+  WHERE patients.id = appointments.patient_id
+  AND patients.id = auth.uid()
 ));
 
-CREATE POLICY "Users can update forms for their appointments" 
-ON public.forms 
-FOR UPDATE 
+CREATE POLICY "Users can create their own appointments"
+ON public.appointments
+FOR INSERT
+WITH CHECK (EXISTS (
+  SELECT 1 FROM public.patients
+  WHERE patients.id = appointments.patient_id
+  AND patients.id = auth.uid()
+));
+
+CREATE POLICY "Users can update their own appointments"
+ON public.appointments
+FOR UPDATE
 USING (EXISTS (
-  SELECT 1 FROM public.appointments 
-  WHERE appointments.id = forms.appointment_id 
-  AND appointments.patient_id::text = auth.uid()::text
+  SELECT 1 FROM public.patients
+  WHERE patients.id = appointments.patient_id
+  AND patients.id = auth.uid()
+));
+
+-- Create RLS policies for forms (users can only see forms for their appointments)
+CREATE POLICY "Users can view forms for their appointments"
+ON public.forms
+FOR SELECT
+USING (EXISTS (
+  SELECT 1 FROM public.appointments
+  WHERE appointments.id = forms.appointment_id
+  AND EXISTS (
+    SELECT 1 FROM public.patients
+    WHERE patients.id = appointments.patient_id
+    AND patients.id = auth.uid()
+  )
+));
+
+CREATE POLICY "Users can update forms for their. appointments"
+ON public.forms
+FOR UPDATE
+USING (EXISTS (
+  SELECT 1 FROM public.appointments
+  WHERE appointments.id = forms.appointment_id
+  AND EXISTS (
+    SELECT 1 FROM public.patients
+    WHERE patients.id = appointments.patient_id
+    AND patients.id = auth.uid()
+  )
 ));
 
 -- Create RLS policies for reminders (users can only see reminders for their appointments)
-CREATE POLICY "Users can view reminders for their appointments" 
-ON public.reminders 
-FOR SELECT 
+CREATE POLICY "Users can view reminders for their appointments"
+ON public.reminders
+FOR SELECT
 USING (EXISTS (
-  SELECT 1 FROM public.appointments 
-  WHERE appointments.id = reminders.appointment_id 
-  AND appointments.patient_id::text = auth.uid()::text
+  SELECT 1 FROM public.appointments
+  WHERE appointments.id = reminders.appointment_id
+  AND EXISTS (
+    SELECT 1 FROM public.patients
+    WHERE patients.id = appointments.patient_id
+    AND patients.id = auth.uid()
+  )
 ));
 
 -- Create function to update timestamps
@@ -190,8 +226,41 @@ CREATE TRIGGER update_reminders_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Create function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insert into patients table
+  INSERT INTO public.patients (id, first_name, last_name, email, phone, dob, patient_type)
+  VALUES (
+    NEW.id,
+    NEW.raw_user_meta_data->>'first_name',
+    NEW.raw_user_meta_data->>'last_name',
+    NEW.email,
+    NEW.raw_user_meta_data->>'phone',
+    (NEW.raw_user_meta_data->>'dob')::date,
+    COALESCE(NEW.raw_user_meta_data->>'patient_type', 'new')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for new user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
 -- Insert sample doctors
 INSERT INTO public.doctors (name, specialty, location, calendar_reference) VALUES
 ('Dr. Sarah Johnson', 'General Practice', 'Main Clinic', 'dr_johnson_schedule'),
 ('Dr. Michael Chen', 'Cardiology', 'Heart Center', 'dr_chen_schedule'),
-('Dr. Emily Rodriguez', 'Pediatrics', 'Children''s Wing', 'dr_rodriguez_schedule');
+('Dr. Emily Rodriguez', 'Pediatrics', 'Children's Wing', 'dr_rodriguez_schedule'),
+('Dr. Alex Ray', 'Dermatology', 'Skin Care Center'),
+('Dr. Jordan Lee', 'Orthopedics', 'Bone and Joint Clinic'),
+('Dr. Casey Brown', 'Neurology', 'Brain and Nerve Institute'),
+('Dr. Evelyn Reed', 'Cardiology', 'Heartbeat Clinic'),
+('Dr. Marcus Thorne', 'Pediatrics', 'Childrens Wellness Center'),
+('Dr. Lena Petrova', 'Neurology', 'Mind & Brain Institute'),
+('Dr. Samuel Chen', 'Dermatology', 'The Skin Health Practice'),
+('Dr. Isabella Rossi', 'Orthopedics', 'Joint & Motion Specialists');

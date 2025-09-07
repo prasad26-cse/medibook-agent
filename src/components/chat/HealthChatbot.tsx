@@ -1,194 +1,142 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, Bot, User } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Send, Bot, User as UserIcon } from "lucide-react";
+import { User } from "@supabase/supabase-js";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
+  text: string;
+  sender: "user" | "bot";
 }
 
-const HealthChatbot = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Hello! I'm your health assistant. I can help with basic health questions, appointment guidance, and general wellness tips. How can I help you today?",
-      role: 'assistant',
-      timestamp: new Date()
-    }
-  ]);
+interface HealthChatbotProps {
+  user: User;
+}
+
+const HealthChatbot = ({ user }: HealthChatbotProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Free tier: Simple response system instead of expensive AI API calls
-  const getSimpleResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase();
-    
-    // Basic health responses (free tier - rule-based)
-    if (input.includes('appointment') || input.includes('book') || input.includes('schedule')) {
-      return "To book an appointment, please use the 'Book Appointment' feature on your dashboard. You can select your preferred doctor, date, and time. Is there a specific type of appointment you're looking for?";
-    }
-    
-    if (input.includes('symptom') || input.includes('pain') || input.includes('sick')) {
-      return "I understand you're experiencing symptoms. While I can provide general wellness information, it's important to consult with a healthcare professional for proper diagnosis and treatment. Would you like me to help you schedule an appointment?";
-    }
-    
-    if (input.includes('medicine') || input.includes('medication') || input.includes('prescription')) {
-      return "For medication questions, please consult with your doctor or pharmacist. They can provide accurate information about dosages, interactions, and side effects. I can help you schedule an appointment if needed.";
-    }
-    
-    if (input.includes('insurance') || input.includes('coverage') || input.includes('cost')) {
-      return "For insurance and billing questions, you can update your insurance information in your profile or contact our billing department. Each provider may have different coverage policies.";
-    }
-    
-    if (input.includes('emergency') || input.includes('urgent') || input.includes('serious')) {
-      return "⚠️ For medical emergencies, please call 911 immediately or go to your nearest emergency room. For urgent but non-emergency situations, consider calling your doctor's after-hours line or visiting an urgent care center.";
-    }
-    
-    if (input.includes('hello') || input.includes('hi') || input.includes('hey')) {
-      return "Hello! I'm here to help with your healthcare questions and guide you through using MedSchedule. What would you like to know about?";
-    }
-    
-    if (input.includes('thank') || input.includes('thanks')) {
-      return "You're welcome! I'm always here to help with your healthcare questions. Is there anything else I can assist you with?";
-    }
-    
-    // Default response
-    return "I'm here to help with basic health questions and guide you through MedSchedule features. For specific medical advice, please consult with a healthcare professional. You can book an appointment through your dashboard. What else would you like to know?";
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+  
+  // Add a welcome message when the component mounts
+  useEffect(() => {
+    setMessages([
+      {
+        text: `Hi ${user.user_metadata?.first_name || 'there'}! I'm your AI Health Assistant. How can I help you today? You can ask me about booking appointments, managing your profile, or general questions about MedSchedule.`,
+        sender: "bot",
+      },
+    ]);
+  }, [user]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      role: 'user',
-      timestamp: new Date()
-    };
 
-    setMessages(prev => [...prev, userMessage]);
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userMessage: Message = { text: input, sender: "user" };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setLoading(true);
+    setIsLoading(true);
 
-    try {
-      // Free tier: Simple rule-based responses with small delay for UX
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const response = getSimpleResponse(input);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        role: 'assistant',
-        timestamp: new Date()
+    // Simulate a delay and provide a canned response
+    setTimeout(() => {
+      const botResponse: Message = {
+        text: "This is a placeholder response. The real AI chatbot is coming soon!",
+        sender: "bot",
       };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to get response. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+      setMessages((prev) => [...prev, botResponse]);
+      setIsLoading(false);
+    }, 1500);
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-primary">
-          <MessageCircle className="w-5 h-5" />
-          Health Assistant
-        </CardTitle>
-        <CardDescription>
-          Ask me about appointments, general health questions, or how to use MedSchedule
-        </CardDescription>
+    <Card className="w-full max-w-3xl mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-sm border-border/20">
+      <CardHeader className="flex flex-row items-center space-x-4 p-4 border-b border-border/20">
+        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+          <Bot className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <CardTitle className="text-lg font-bold text-foreground">AI Health Assistant</CardTitle>
+          <p className="text-sm text-muted-foreground">Ask me anything about MedSchedule</p>
+        </div>
       </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ScrollArea className="flex-1 px-6">
-          <div className="space-y-4 pb-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`flex gap-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    message.role === 'user' 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {message.role === 'user' ? (
-                      <User className="w-4 h-4" />
-                    ) : (
-                      <Bot className="w-4 h-4" />
-                    )}
+      <CardContent className="p-0">
+        <div className="h-[60vh] overflow-y-auto p-4 space-y-4">
+          <AnimatePresence>
+            {messages.map((msg, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className={`flex items-start gap-3 ${msg.sender === "user" ? "justify-end" : ""}`}>
+                {msg.sender === "bot" && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
-                  <div className={`rounded-lg px-4 py-2 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
+                )}
+                <div className={`px-4 py-2.5 rounded-2xl max-w-[80%] ${msg.sender === "user"
+                    ? "bg-primary text-primary-foreground rounded-br-none"
+                    : "bg-muted/50 rounded-bl-none"}`}>                    
+                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                 </div>
-              </div>
+                {msg.sender === "user" && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center flex-shrink-0">
+                    <UserIcon className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </motion.div>
             ))}
-            {loading && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Bot className="w-4 h-4" />
-                </div>
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
+          </AnimatePresence>
+          {isLoading && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div className="px-4 py-2.5 rounded-2xl bg-muted/50 rounded-bl-none">
+                <div className="flex items-center space-x-2">
+                    <span className="h-2 w-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="h-2 w-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="h-2 w-2 bg-green-500 rounded-full animate-bounce"></span>
                 </div>
               </div>
-            )}
-          </div>
-        </ScrollArea>
-        
-        <div className="border-t p-4">
-          <div className="flex gap-2">
+            </motion.div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className="p-4 border-t border-border/20">
+          <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask about appointments, health questions, or how to use MedSchedule..."
-              disabled={loading}
+              placeholder="Type your message..."
+              className="flex-1 bg-background/50 rounded-full focus-visible:ring-1 focus-visible:ring-primary/50"
+              autoFocus
             />
             <Button 
-              onClick={sendMessage} 
-              disabled={loading || !input.trim()}
-              size="sm"
-            >
-              <Send className="w-4 h-4" />
+              type="submit" 
+              size="icon" 
+              className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 disabled:bg-primary/50"
+              disabled={isLoading || !input.trim()}>
+              <Send className="w-5 h-5" />
             </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Free tier: Basic health guidance. For medical advice, consult a healthcare professional.
-          </p>
+          </form>
         </div>
       </CardContent>
     </Card>

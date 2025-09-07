@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Heart, Calendar, UserPlus, LogIn } from "lucide-react";
+import { Heart, UserPlus, LogIn } from "lucide-react";
 
 const AuthPage = () => {
   const [loading, setLoading] = useState(false);
@@ -22,35 +22,61 @@ const AuthPage = () => {
     const dob = formData.get("dob") as string;
     const patientType = formData.get("patientType") as string;
 
-    const redirectUrl = `${window.location.origin}/`;
-
-    const { data, error } = await supabase.auth.signUp({
+    // Step 1: Sign up the user
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          phone,
-          dob,
-          patient_type: patientType
-        }
-      }
+        emailRedirectTo: `${window.location.origin}/booking`,
+      },
     });
 
-    if (error) {
+    if (signUpError) {
       toast({
         title: "Sign up failed",
-        description: error.message,
-        variant: "destructive"
+        description: signUpError.message,
+        variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account."
-      });
+      setLoading(false);
+      return;
     }
+
+    if (!authData.user) {
+        toast({
+            title: "Sign up failed",
+            description: "Could not create user. Please try again",
+            variant: "destructive",
+        });
+        setLoading(false);
+        return;
+    }
+
+    // Step 2: Insert into patients table
+    const { error: insertError } = await supabase.from('patients').insert([
+        {
+            id: authData.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone,
+            dob,
+            patient_type: patientType,
+        },
+    ]);
+
+    if (insertError) {
+        toast({
+            title: "Error completing profile",
+            description: `Your account was created, but we failed to save your profile data. Please contact support. Error: ${insertError.message}`,
+            variant: "destructive",
+        });
+    } else {
+        toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account and complete the process.",
+        });
+    }
+
     setLoading(false);
   };
 
@@ -59,7 +85,7 @@ const AuthPage = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Check for admin credentials first
+    // Hardcoded admin check
     if (email === "admin@clinic.com" && password === "Admin@1234") {
       localStorage.setItem("admin_session", "true");
       localStorage.setItem("admin_email", email);
@@ -69,7 +95,7 @@ const AuthPage = () => {
     }
 
     // Regular user authentication
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
@@ -79,6 +105,12 @@ const AuthPage = () => {
         title: "Sign in failed",
         description: error.message,
         variant: "destructive"
+      });
+    } else if (data.user) {
+        window.location.href = "/booking";
+      toast({
+        title: "Sign in successful",
+        description: "Welcome back!"
       });
     }
     setLoading(false);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,19 +36,13 @@ const Dashboard = ({ user, session }: DashboardProps) => {
         navigate('/booking');
         break;
       case 'chat':
-        navigate('/booking?tab=chat');
+        navigate('/health-chat');
         break;
       case 'profile':
-        toast({
-          title: "Profile Management",
-          description: "Profile editing coming soon! (Free tier feature)",
-        });
+        navigate('/profile');
         break;
       case 'forms':
-        toast({
-          title: "Medical Forms",
-          description: "Form management coming soon! (Free tier feature)",
-        });
+        navigate('/view-form');
         break;
       default:
         break;
