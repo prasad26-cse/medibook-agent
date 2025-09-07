@@ -34,12 +34,58 @@ const HealthChatbot = ({ user }: HealthChatbotProps) => {
   useEffect(() => {
     setMessages([
       {
-        text: `Hi ${user.user_metadata?.first_name || 'there'}! I'm your AI Health Assistant. How can I help you today? You can ask me about booking appointments, managing your profile, or general questions about MedSchedule.`,
+        text: `Hi ${user.user_metadata?.first_name || 'there'}! I'm your AI Health Assistant from MediCare Allergy & Wellness Center. I can help you with:\n\n• Questions about our services and specialties\n• Information about allergy testing and treatments\n• Guidance on preparing for your appointments\n• Understanding your symptoms\n• General health and wellness advice\n\nHow can I assist you today?`,
         sender: "bot",
       },
     ]);
   }, [user]);
 
+  const getHealthResponse = (userInput: string): string => {
+    const input = userInput.toLowerCase();
+    
+    // Appointment related
+    if (input.includes('appointment') || input.includes('booking') || input.includes('schedule')) {
+      return "I can help you understand our appointment process! At MediCare Allergy & Wellness Center, we offer appointments for allergy testing, consultations, and treatments. You can book through the dashboard. Please remember to complete your New Patient Intake Form 24 hours before your visit. Would you like to know more about any specific service?";
+    }
+    
+    // Allergy related
+    if (input.includes('allergy') || input.includes('allergic') || input.includes('reaction')) {
+      return "Allergies are our specialty! We test for environmental allergens, food allergies, and medication sensitivities. Common symptoms include sneezing, runny nose, itchy eyes, skin rashes, and breathing difficulties. IMPORTANT: If you're planning allergy testing, stop antihistamines (Claritin, Zyrtec, Allegra, Benadryl) 7 days before your appointment. Is there a specific allergy concern you'd like to discuss?";
+    }
+    
+    // Symptoms
+    if (input.includes('symptom') || input.includes('sneezing') || input.includes('runny nose') || input.includes('itchy') || input.includes('rash') || input.includes('breathing')) {
+      return "Those symptoms could be allergy-related! Common allergy symptoms include sneezing, runny/stuffy nose, itchy/watery eyes, skin rashes, and breathing difficulties. If symptoms persist or worsen, please schedule an appointment. For severe reactions or difficulty breathing, seek immediate medical attention. What specific symptoms are you experiencing?";
+    }
+    
+    // Medications
+    if (input.includes('medication') || input.includes('claritin') || input.includes('zyrtec') || input.includes('benadryl') || input.includes('flonase')) {
+      return "I can provide information about allergy medications! Common options include antihistamines (Claritin, Zyrtec, Allegra) for daily use, Benadryl for acute reactions, and nasal sprays (Flonase, Nasacort) for congestion. Remember: Stop antihistamines 7 days before allergy testing, but you can continue nasal sprays and asthma inhalers. Always consult with our doctors for personalized medication advice.";
+    }
+    
+    // Forms
+    if (input.includes('form') || input.includes('intake') || input.includes('paperwork')) {
+      return "Our New Patient Intake Form is available in the Medical Forms section of your dashboard. Please complete it 24 hours before your appointment or arrive 15 minutes early if completing at the office. The form includes important medical history, current medications, and symptoms information that helps our doctors provide the best care.";
+    }
+    
+    // Testing
+    if (input.includes('test') || input.includes('testing')) {
+      return "We offer comprehensive allergy testing to identify specific triggers. Before testing, you must stop antihistamines (Claritin, Zyrtec, Allegra, Benadryl) 7 days prior - this is crucial for accurate results. You can continue nasal sprays and asthma medications. Our testing helps identify environmental, food, and medication allergies so we can create an effective treatment plan.";
+    }
+    
+    // Emergency
+    if (input.includes('emergency') || input.includes('epipen') || input.includes('severe') || input.includes('anaphylaxis')) {
+      return "For severe allergic reactions or anaphylaxis, call 911 immediately! If you have an EpiPen, use it as prescribed and still seek emergency care. Signs of severe reactions include difficulty breathing, swelling of face/throat, rapid pulse, dizziness, or severe full-body rash. Always carry emergency medications if prescribed and inform our office of any severe reactions.";
+    }
+    
+    // General health
+    if (input.includes('health') || input.includes('wellness') || input.includes('general')) {
+      return "At MediCare Allergy & Wellness Center, we focus on comprehensive allergy and wellness care. Beyond allergy testing and treatment, we provide education on environmental triggers, dietary guidance for food allergies, and long-term management strategies. Maintaining good overall health supports your immune system and can help manage allergy symptoms.";
+    }
+    
+    // Default response
+    return "I'm here to help with questions about allergies, symptoms, medications, appointments, and our services at MediCare Allergy & Wellness Center. You can ask me about:\n\n• Allergy symptoms and testing\n• Appointment preparation\n• Medication guidance\n• Our forms and services\n• General wellness tips\n\nWhat specific information would you like to know?";
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,18 +93,19 @@ const HealthChatbot = ({ user }: HealthChatbotProps) => {
 
     const userMessage: Message = { text: input, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
 
-    // Simulate a delay and provide a canned response
+    // Simulate a delay and provide contextual response
     setTimeout(() => {
       const botResponse: Message = {
-        text: "This is a placeholder response. The real AI chatbot is coming soon!",
+        text: getHealthResponse(currentInput),
         sender: "bot",
       };
       setMessages((prev) => [...prev, botResponse]);
       setIsLoading(false);
-    }, 1500);
+    }, 1000);
   };
 
   return (
