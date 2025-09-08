@@ -22,12 +22,12 @@ const AuthPage = () => {
     const dob = formData.get("dob") as string;
     const patientType = formData.get("patientType") as string;
 
-    // Step 1: Sign up the user
+    // Step 1: Sign up the user (email confirmation may be required)
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/booking`,
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
 
@@ -41,19 +41,14 @@ const AuthPage = () => {
       return;
     }
 
-    if (!authData.user) {
-        toast({
-            title: "Sign up failed",
-            description: "Could not create user. Please try again",
-            variant: "destructive",
-        });
-        setLoading(false);
-        return;
-    }
-
-    // Step 2: Insert into patients table
-    const { error: insertError } = await supabase.from('patients').insert([
-        {
+    // If a session is immediately available (when email confirm is disabled),
+    // upsert the patient profile. Otherwise, rely on the DB trigger to create
+    // a minimal patient row and the user can complete profile after verifying email.
+    if (authData?.user && authData?.session) {
+      const { error: upsertError } = await supabase
+        .from('patients')
+        .upsert([
+          {
             id: authData.user.id,
             first_name: firstName,
             last_name: lastName,
@@ -61,21 +56,21 @@ const AuthPage = () => {
             phone,
             dob,
             patient_type: patientType,
-        },
-    ]);
+          },
+        ], { onConflict: 'id' });
 
-    if (insertError) {
+      if (upsertError) {
         toast({
-            title: "Error completing profile",
-            description: `Your account was created, but we failed to save your profile data. Please contact support. Error: ${insertError.message}`,
-            variant: "destructive",
+          title: "Profile saved partially",
+          description: `Account created but we couldn't save profile details right now. You can update them later. (${upsertError.message})`,
         });
-    } else {
-        toast({
-            title: "Account created!",
-            description: "Please check your email to verify your account and complete the process.",
-        });
+      }
     }
+
+    toast({
+      title: "Account created!",
+      description: "Please check your email to verify your account and complete the process.",
+    });
 
     setLoading(false);
   };
