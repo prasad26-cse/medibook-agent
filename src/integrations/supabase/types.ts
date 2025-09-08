@@ -21,11 +21,11 @@ export type Database = {
           duration_minutes: number
           end_time: string
           id: string
-          is_new_patient: boolean | null
+          is_new_patient: boolean
           notes: string | null
           patient_id: string
           start_time: string
-          status: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -34,11 +34,11 @@ export type Database = {
           duration_minutes?: number
           end_time: string
           id?: string
-          is_new_patient?: boolean | null
+          is_new_patient?: boolean
           notes?: string | null
           patient_id: string
           start_time: string
-          status?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -47,29 +47,14 @@ export type Database = {
           duration_minutes?: number
           end_time?: string
           id?: string
-          is_new_patient?: boolean | null
+          is_new_patient?: boolean
           notes?: string | null
           patient_id?: string
           start_time?: string
-          status?: string | null
+          status?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_doctor_id_fkey"
-            columns: ["doctor_id"]
-            isOneToOne: false
-            referencedRelation: "doctors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       doctors: {
         Row: {
@@ -132,74 +117,55 @@ export type Database = {
           template_name?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "forms_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       patients: {
         Row: {
           address: string | null
           created_at: string
-          dob: string
+          dob: string | null
           email: string
-          first_name: string
+          first_name: string | null
           group_id: string | null
           id: string
           insurance_carrier: string | null
-          last_name: string
+          last_name: string | null
           member_id: string | null
           patient_type: string | null
-          phone: string
-          primary_doctor_id: string | null
+          phone: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           created_at?: string
-          dob: string
+          dob?: string | null
           email: string
-          first_name: string
+          first_name?: string | null
           group_id?: string | null
-          id?: string
+          id: string
           insurance_carrier?: string | null
-          last_name: string
+          last_name?: string | null
           member_id?: string | null
           patient_type?: string | null
-          phone: string
-          primary_doctor_id?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           created_at?: string
-          dob?: string
+          dob?: string | null
           email?: string
-          first_name?: string
+          first_name?: string | null
           group_id?: string | null
           id?: string
           insurance_carrier?: string | null
-          last_name?: string
+          last_name?: string | null
           member_id?: string | null
           patient_type?: string | null
-          phone?: string
-          primary_doctor_id?: string | null
+          phone?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_patients_doctor"
-            columns: ["primary_doctor_id"]
-            isOneToOne: false
-            referencedRelation: "doctors"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       reminders: {
         Row: {
@@ -232,15 +198,7 @@ export type Database = {
           sent_at?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "reminders_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
