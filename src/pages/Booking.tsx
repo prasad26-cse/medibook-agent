@@ -157,7 +157,7 @@ const BookingPage = ({ user, session }: BookingPageProps) => {
           start_time: startTime.toISOString(),
           end_time: new Date(startTime.getTime() + 30 * 60000).toISOString(),
           notes,
-          status: "confirmed",
+          status: "pending",
           is_new_patient: isNewPatient,
         },
       ]);

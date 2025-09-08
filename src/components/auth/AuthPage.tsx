@@ -107,11 +107,11 @@ const AuthPage = () => {
         variant: "destructive"
       });
     } else if (data.user) {
-        window.location.href = "/booking";
       toast({
         title: "Sign in successful",
         description: "Welcome back!"
       });
+      window.location.href = "/booking";
     }
     setLoading(false);
   };
