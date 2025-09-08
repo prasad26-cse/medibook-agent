@@ -8,6 +8,7 @@ import { adminService } from "@/services/adminService";
 import AppointmentsTable from "./AppointmentsTable";
 import PatientsTable from "./PatientsTable";
 import DoctorsSchedule from "./DoctorsSchedule";
+import AllUsersTable from "./AllUsersTable";
 
 interface DashboardStats {
   total_appointments: number;
@@ -115,6 +116,7 @@ const AdminDashboard = () => {
                 { id: "overview", label: "Overview", icon: Activity },
                 { id: "appointments", label: "Appointments", icon: Calendar },
                 { id: "patients", label: "Patients", icon: Users },
+                { id: "allusers", label: "All Users", icon: Users },
                 { id: "doctors", label: "Doctors", icon: UserCheck },
               ].map(({ id, label, icon: Icon }) => (
                 <button
@@ -198,7 +200,7 @@ const AdminDashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
                 <CardDescription>Common administrative tasks</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Button 
                   onClick={() => setActiveTab("appointments")} 
                   variant="outline" 
@@ -216,6 +218,14 @@ const AdminDashboard = () => {
                   <span>View Patients</span>
                 </Button>
                 <Button 
+                  onClick={() => setActiveTab("allusers")} 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center space-y-2"
+                >
+                  <Users className="w-6 h-6" />
+                  <span>All Users</span>
+                </Button>
+                <Button 
                   onClick={() => setActiveTab("doctors")} 
                   variant="outline" 
                   className="h-auto p-4 flex flex-col items-center space-y-2"
@@ -230,6 +240,7 @@ const AdminDashboard = () => {
 
         {activeTab === "appointments" && <AppointmentsTable />}
         {activeTab === "patients" && <PatientsTable />}
+        {activeTab === "allusers" && <AllUsersTable />}
         {activeTab === "doctors" && <DoctorsSchedule />}
       </main>
     </div>
