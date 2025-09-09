@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +13,67 @@ interface DashboardProps {
   session: Session;
 }
 
+interface Appointment {
+  id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  doctor_name: string;
+  notes?: string;
+}
 const Dashboard = ({ user, session }: DashboardProps) => {
   const [loading, setLoading] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [upcomingCount, setUpcomingCount] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchUserAppointments();
+  }, [user.id]);
+
+  const fetchUserAppointments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          start_time,
+          end_time,
+          status,
+          notes,
+          doctors!inner(name)
+        `)
+        .eq('patient_id', user.id)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        return;
+      }
+
+      const formattedAppointments = data?.map(apt => ({
+        id: apt.id,
+        start_time: apt.start_time,
+        end_time: apt.end_time,
+        status: apt.status,
+        doctor_name: (apt.doctors as any)?.name || 'Unknown Doctor',
+        notes: apt.notes
+      })) || [];
+
+      setAppointments(formattedAppointments);
+      
+      // Count upcoming appointments (future dates)
+      const now = new Date();
+      const upcoming = formattedAppointments.filter(apt => 
+        new Date(apt.start_time) > now && apt.status !== 'cancelled'
+      );
+      setUpcomingCount(upcoming.length);
+
+    } catch (error) {
+      console.error('Error in fetchUserAppointments:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -122,7 +180,7 @@ const Dashboard = ({ user, session }: DashboardProps) => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user.user_metadata?.first_name || user.email}!
+            Welcome back, {user.user_metadata?.first_name ? `${user.user_metadata.first_name} ${user.user_metadata?.last_name || ''}`.trim() : user.email}!
           </h2>
           <p className="text-muted-foreground text-lg">
             Ready to manage your healthcare appointments?
@@ -165,8 +223,10 @@ const Dashboard = ({ user, session }: DashboardProps) => {
               <CardTitle className="text-lg text-primary">Upcoming Appointments</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary mb-1">0</div>
-              <p className="text-sm text-muted-foreground">No appointments scheduled</p>
+              <div className="text-3xl font-bold text-primary mb-1">{upcomingCount}</div>
+              <p className="text-sm text-muted-foreground">
+                {upcomingCount === 0 ? 'No appointments scheduled' : 'Scheduled appointments'}
+              </p>
             </CardContent>
           </Card>
           
@@ -190,6 +250,49 @@ const Dashboard = ({ user, session }: DashboardProps) => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Appointments */}
+        {appointments.length > 0 && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="w-5 h-5 mr-2" />
+                  Your Appointments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {appointments.slice(0, 5).map((appointment) => (
+                    <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-semibold">{appointment.doctor_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(appointment.start_time).toLocaleDateString()} at{' '}
+                          {new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {appointment.notes && (
+                          <p className="text-sm text-muted-foreground mt-1">{appointment.notes}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          appointment.status === 'confirmed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : appointment.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {appointment.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

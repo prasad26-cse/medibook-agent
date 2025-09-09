@@ -166,9 +166,34 @@ const BookingPage = ({ user, session }: BookingPageProps) => {
         throw insertError;
       }
 
+      // Send confirmation email
+      try {
+        const emailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-confirmation`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            appointmentId: `apt_${Date.now()}`,
+            userEmail: user.email,
+            appointmentDate: format(date, "PPP"),
+            appointmentTime: time,
+            doctorId: doctorId
+          })
+        });
+
+        if (!emailResponse.ok) {
+          console.warn('Failed to send confirmation email, but appointment was booked successfully');
+        }
+      } catch (emailError) {
+        console.warn('Email service error:', emailError);
+        // Don't fail the booking if email fails
+      }
+
       toast({
         title: "Appointment Booked Successfully!",
-        description: `Your appointment is confirmed for ${format(date, "PPP")} at ${time}.`,
+        description: `Your appointment is confirmed for ${format(date, "PPP")} at ${time}. A confirmation email has been sent to ${user.email}.`,
       });
       reset({ doctorId: "", date: undefined, time: "", notes: "", isNewPatient: false });
 

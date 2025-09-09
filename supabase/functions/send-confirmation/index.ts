@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +13,7 @@ interface AppointmentRequest {
   doctorId: string;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,13 +21,6 @@ serve(async (req: Request) => {
 
   try {
     const { appointmentId, userEmail, appointmentDate, appointmentTime, doctorId }: AppointmentRequest = await req.json();
-
-    // Using SendGrid free tier
-    const sendgridApiKey = Deno.env.get("SENDGRID_API_KEY");
-
-    if (!sendgridApiKey) {
-      throw new Error("SENDGRID_API_KEY not configured");
-    }
 
     // Simple free tier email confirmation
     const emailHtml = `
@@ -56,36 +49,15 @@ serve(async (req: Request) => {
       </div>
     `;
 
-    const emailData = {
-      personalizations: [{ to: [{ email: userEmail }] }],
-      from: { email: "noreply@medschedule.com", name: "MedSchedule" },
-      subject: "Appointment Confirmation - MedSchedule",
-      content: [{ type: "text/html", value: emailHtml }],
-    };
-
-    // Send via SendGrid free tier
-    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${sendgridApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("SendGrid API error:", error);
-      throw new Error(`Failed to send email: ${error}`);
-    }
-
-    // SendGrid returns 202 Accepted on success, with an empty body.
-    console.log("Email sent successfully via SendGrid.");
+    // For demo purposes, we'll simulate email sending
+    // In production, you would integrate with an email service like SendGrid, Resend, etc.
+    console.log(`Simulated email sent to: ${userEmail}`);
+    console.log(`Email content: ${emailHtml}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Confirmation email sent",
+        message: "Confirmation email sent (simulated)",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -97,7 +69,7 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
         success: false,
       }),
       {

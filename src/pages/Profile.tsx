@@ -1,16 +1,20 @@
 import { User } from "@supabase/supabase-js";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ArrowLeft } from "lucide-react";
 
 interface ProfileProps {
   user: User | null;
 }
 
 const ProfilePage = ({ user }: ProfileProps) => {
+  const navigate = useNavigate();
+
   if (!user) {
     return <div>Loading...</div>;
   }
@@ -33,7 +37,23 @@ const ProfilePage = ({ user }: ProfileProps) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-medical-coral/5">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-border/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Home
+            </Button>
+          </div>
+        </div>
+      </header>
+      
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-foreground mb-8">My Profile</h1>
       <Card>
         <CardHeader>
@@ -85,6 +105,7 @@ const ProfilePage = ({ user }: ProfileProps) => {
           </div>
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 };

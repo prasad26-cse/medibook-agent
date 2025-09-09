@@ -27,6 +27,13 @@ const AuthPage = () => {
       email,
       password,
       options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+          dob: dob,
+          patient_type: patientType,
+        },
         emailRedirectTo: `${window.location.origin}/`,
       },
     });
@@ -65,11 +72,30 @@ const AuthPage = () => {
           description: `Account created but we couldn't save profile details right now. You can update them later. (${upsertError.message})`,
         });
       }
+    } else if (authData?.user) {
+      // Even without immediate session, try to create patient record
+      try {
+        await supabase
+          .from('patients')
+          .upsert([
+            {
+              id: authData.user.id,
+              first_name: firstName,
+              last_name: lastName,
+              email,
+              phone,
+              dob,
+              patient_type: patientType,
+            },
+          ], { onConflict: 'id' });
+      } catch (error) {
+        console.warn('Could not create patient record immediately:', error);
+      }
     }
 
     toast({
       title: "Account created!",
-      description: "Please check your email to verify your account and complete the process.",
+      description: authData?.session ? "Account created successfully! You can now sign in." : "Please check your email to verify your account and complete the process.",
     });
 
     setLoading(false);

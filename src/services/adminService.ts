@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 // Simple admin service using localStorage (no backend needed)
 interface AdminStats {
   total_appointments: number;
@@ -51,55 +53,6 @@ class AdminService {
     window.location.href = "/";
   }
 
-  // Mock data for demo purposes
-  private mockAppointments: Appointment[] = [
-    {
-      id: "1",
-      patient_name: "John Smith",
-      doctor: "Dr. Johnson",
-      date: "2024-01-15",
-      time: "09:00",
-      status: "Confirmed",
-      patient_type: "New",
-      phone: "(555) 123-4567",
-      insurance: "BlueCross"
-    },
-    {
-      id: "2",
-      patient_name: "Sarah Wilson",
-      doctor: "Dr. Brown",
-      date: "2024-01-16",
-      time: "14:30",
-      status: "Pending",
-      patient_type: "Returning",
-      phone: "(555) 987-6543",
-      insurance: "Aetna"
-    }
-  ];
-
-  private mockPatients: Patient[] = [
-    {
-      id: "1",
-      name: "John Smith",
-      dob: "1985-03-15",
-      phone: "(555) 123-4567",
-      email: "john.smith@email.com",
-      patient_type: "New",
-      insurance_carrier: "BlueCross",
-      member_id: "BC123456"
-    },
-    {
-      id: "2",
-      name: "Sarah Wilson",
-      dob: "1990-07-22",
-      phone: "(555) 987-6543",
-      email: "sarah.wilson@email.com",
-      patient_type: "Returning",
-      insurance_carrier: "Aetna",
-      member_id: "AET789012"
-    }
-  ];
-
   private mockDoctors: Doctor[] = [
     {
       id: "1",
@@ -121,14 +74,48 @@ class AdminService {
       throw new Error("Not authenticated");
     }
 
-    return {
-      total_appointments: this.mockAppointments.length,
-      confirmed_appointments: this.mockAppointments.filter(a => a.status === "Confirmed").length,
-      pending_appointments: this.mockAppointments.filter(a => a.status === "Pending").length,
-      total_patients: this.mockPatients.length,
-      new_patients: this.mockPatients.filter(p => p.patient_type === "New").length,
-      returning_patients: this.mockPatients.filter(p => p.patient_type === "Returning").length
-    };
+    try {
+      // Get appointments count
+      const { data: appointments, error: appointmentsError } = await supabase
+        .from('appointments')
+        .select('id, status');
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Get patients count
+      const { data: patients, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, patient_type');
+
+      if (patientsError) throw patientsError;
+
+      const totalAppointments = appointments?.length || 0;
+      const confirmedAppointments = appointments?.filter(a => a.status === 'confirmed').length || 0;
+      const pendingAppointments = appointments?.filter(a => a.status === 'pending').length || 0;
+      const totalPatients = patients?.length || 0;
+      const newPatients = patients?.filter(p => p.patient_type === 'new').length || 0;
+      const returningPatients = patients?.filter(p => p.patient_type === 'returning').length || 0;
+
+      return {
+        total_appointments: totalAppointments,
+        confirmed_appointments: confirmedAppointments,
+        pending_appointments: pendingAppointments,
+        total_patients: totalPatients,
+        new_patients: newPatients,
+        returning_patients: returningPatients
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      // Return default values if database query fails
+      return {
+        total_appointments: 0,
+        confirmed_appointments: 0,
+        pending_appointments: 0,
+        total_patients: 0,
+        new_patients: 0,
+        returning_patients: 0
+      };
+    }
   }
 
   // Get appointments
@@ -136,7 +123,38 @@ class AdminService {
     if (!this.isAuthenticated()) {
       throw new Error("Not authenticated");
     }
-    return this.mockAppointments;
+
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          start_time,
+          status,
+          is_new_patient,
+          notes,
+          patients!inner(first_name, last_name, phone, insurance_carrier),
+          doctors!inner(name)
+        `)
+        .order('start_time', { ascending: false });
+
+      if (error) throw error;
+
+      return data?.map(apt => ({
+        id: apt.id,
+        patient_name: `${(apt.patients as any)?.first_name || ''} ${(apt.patients as any)?.last_name || ''}`.trim() || 'Unknown Patient',
+        doctor: (apt.doctors as any)?.name || 'Unknown Doctor',
+        date: new Date(apt.start_time).toLocaleDateString(),
+        time: new Date(apt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: apt.status.charAt(0).toUpperCase() + apt.status.slice(1),
+        patient_type: apt.is_new_patient ? 'New' : 'Returning',
+        phone: (apt.patients as any)?.phone,
+        insurance: (apt.patients as any)?.insurance_carrier
+      })) || [];
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      return [];
+    }
   }
 
   // Get patients
@@ -144,7 +162,29 @@ class AdminService {
     if (!this.isAuthenticated()) {
       throw new Error("Not authenticated");
     }
-    return this.mockPatients;
+
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data?.map(patient => ({
+        id: patient.id,
+        name: `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown',
+        dob: patient.dob || '',
+        phone: patient.phone || '',
+        email: patient.email,
+        patient_type: patient.patient_type || 'new',
+        insurance_carrier: patient.insurance_carrier,
+        member_id: patient.member_id
+      })) || [];
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      return [];
+    }
   }
 
   // Get doctors
@@ -161,9 +201,16 @@ class AdminService {
       throw new Error("Not authenticated");
     }
     
-    const appointment = this.mockAppointments.find(a => a.id === id);
-    if (appointment) {
-      appointment.status = status;
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: status.toLowerCase() })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
     }
   }
 }
